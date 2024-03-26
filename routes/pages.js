@@ -9,13 +9,13 @@ router.get("/", (req, res) => {
 });
 
 router.get("/signup", (req, res) => {
-    res.render("signup_form", {
+    res.render("signup", {
         title: 'Sign Up'
     });
 });
 
 router.get("/login", (req, res) => {
-    res.render("login_form", {
+    res.render("login", {
         title: 'Login'
     });
 });
@@ -31,7 +31,7 @@ router.post("/forgotPassword", authController.HandleforgottenPassword);
 router.get("/resetPassword", (req, res) => {
     res.render("reset_password", {
         title: 'Reset Password',
-        errors: undefined,
+        error: undefined,
         email: undefined, // Pass email back to the template for rendering
         token: undefined
     });
