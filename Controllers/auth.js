@@ -12,7 +12,7 @@ const nodemailer = require("nodemailer");
 // SQL queries used for password reset
 const q = "SELECT * FROM user WHERE uEmail = ?";
 const w = "DELETE FROM password_resets WHERE uEmail = ?";
-const e = "INSERT INTO password_resets (uEmail, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))";
+const e = "INSERT INTO password_resets (uEmail, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))";
 const t = "SELECT * FROM password_resets WHERE uEmail = ? AND token = ? AND expires_at > NOW()";
 const r = "UPDATE user SET uPassword = ? WHERE uEmail = ?";
 
@@ -91,39 +91,39 @@ exports.HandleResetPassword = asyncHandler(async (req, res) => {
   if (NewPassword != ConfirmPassword) {
     return res.render('reset_password', {
       title: 'Reset Password',
-      errors: 'The passwords did not match!',
+      error: 'The passwords did not match!',
       email: email, // Pass email back to the template for rendering
       token: token  // Pass token back to the template for rendering
     });
   }
-    // Check if email, newPassword, and token are provided
-    if (!email || !NewPassword || !token) {
-        return res.status(400).json({ error: 'Email, newPassword, and token needed.' });
+    //still getting an error here
+    if (!NewPassword || !token) {
+        return res.status(400).json({ error: 'newPassword, and token needed.' });
     }
 
     // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(NewPassword, 10);
 
-    // Verify the reset token in the database
+    // Verify  reset token in the database
     database.query(t, [email, token], (error, results) => {
         if (error) {
             console.error('Error verifying reset token:', error);
-            return res.status(500).json({ error: 'error cannot verify reset token.' });
+            return res.status(500).json({ error: 'cannot verify reset token.' });
         }
 
-        // Check if token is valid
+        // Check if token is valid if not return message
         if (results.length === 0) {
-            return res.status(400).json({ error: 'expired or invalid reset token.' });
+            return res.status(400).json({ error: 'expired/invalid reset token.' });
         }
 
-        // Update the user's password in database
+        // Update the user password in database
         database.query(r, [hashedPassword, email], (updateError, updateResults) => {
             if (updateError) {
                 console.error('Error updating password:', updateError);
                 return res.status(500).json({ error: 'error occurred while updating the password.' });
             }
 
-            // Delete token from database
+            // Delete old token from database
             database.query(w, [email], (deleteError, deleteResults) => {
                 if (deleteError) {
                     console.error('Error deleting reset token:', deleteError);
