@@ -5,9 +5,8 @@ const database = require("../routes/db-config");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
 const Signup = require("./Signup");
-const Login = require("./Login");
+const Login = require("./login");
 const nodemailer = require("nodemailer");
-
 
 // SQL queries used for password reset
 const q = "SELECT * FROM user WHERE uEmail = ?";
@@ -15,7 +14,6 @@ const w = "DELETE FROM password_resets WHERE uEmail = ?";
 const e = "INSERT INTO password_resets (uEmail, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))";
 const t = "SELECT * FROM password_resets WHERE uEmail = ? AND token = ? AND expires_at > NOW()";
 const r = "UPDATE user SET uPassword = ? WHERE uEmail = ?";
-
 
 // Forgotten password handler
    exports.HandleforgottenPassword = asyncHandler(async (req, res) => {
@@ -97,9 +95,9 @@ exports.HandleResetPassword = asyncHandler(async (req, res) => {
     });
   }
     //still getting an error here
-    if (!NewPassword || !token) {
-        return res.status(400).json({ error: 'newPassword, and token needed.' });
-    }
+   // if (!NewPassword || !token) {
+     //   return res.status(400).json({ error: 'newPassword, and token needed.' });
+    //}
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(NewPassword, 10);
