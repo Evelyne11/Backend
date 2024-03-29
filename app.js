@@ -1,32 +1,27 @@
-const express = require("express");
-const path = require('path');
-const database = require("./routes/db-config");
-const cookieParser = require("cookie-parser");
+const express = require("express");//create objects express 
 const app = express();
-const cookie = require("cookie-parser");
+const session = require("express-session");
 const bodyParser = require('body-parser');
-app.use(bodyParser.urlencoded({ extended: true }));
+const router = require("./routes/pages");
+
+
+
+app.use(bodyParser.urlencoded({ extended: false}));
 app.use(bodyParser.json());
 
-const Router = require("./routes/pages");
 
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use("/", router);
 
 
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');
-app.use(cookie());
-app.use(express.json());
 
-database.connect((err,res)=>{
-    if (err) throw err;
-    console.log("connected to Mysql")    
+app.set("view engine", "ejs");
+
+
+
+app.use(express.static('Public'));
+
+
+app.listen(8080, ()=>{
+    console.log("Sever started on post 8080")
 })
-
-
-app.listen(8080, function() {
-    console.log('Server is listening on port 8080');
-});
-
-
