@@ -1,19 +1,21 @@
-const express = require("express");
-const router = express.Router();
+const express= require("express");
+const router =express.Router();
 const bcrypt = require("bcrypt");
 const database = require("../routes/db-config");
 const crypto = require("crypto");
 const asyncHandler = require("express-async-handler");
-const Signup = require("./Signup");
-const Login = require("./login");
 const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
+
+
 
 // SQL queries used for password reset
 const q = "SELECT * FROM user WHERE uEmail = ?";
-const w = "DELETE FROM password_resets WHERE uEmail = ?";
-const e = "INSERT INTO password_resets (uEmail, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))";
-const t = "SELECT * FROM password_resets WHERE uEmail = ? AND token = ? AND expires_at > NOW()";
+const w = "DELETE FROM password_resets WHERE email = ?";
+const e = "INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))";
+const t = "SELECT * FROM password_resets WHERE email = ? AND token = ? AND expires_at > NOW()";
 const r = "UPDATE user SET uPassword = ? WHERE uEmail = ?";
+
 
 // Forgotten password handler
    exports.HandleforgottenPassword = asyncHandler(async (req, res) => {
@@ -77,59 +79,55 @@ const r = "UPDATE user SET uPassword = ? WHERE uEmail = ?";
     });
   });
 
-
 // Reset password handler
 exports.HandleResetPassword = asyncHandler(async (req, res) => {
-    const { email, token } = req.params; //url parameters
-    const { NewPassword, ConfirmPassword } = req.body; //data recieved from form
-    // console.log(NewPassword)
-    // console.log(ConfirmPassword)
+  const { email, token } = req.params; //url parameters
+  const { newPassword, confirmPassword } = req.body; //data received from form
 
-    // TO DO: Check if pwd and confrimPwd are the same
-  if (NewPassword != ConfirmPassword) {
-    return res.render('reset_password', {
-      title: 'Reset Password',
-      error: 'The passwords did not match!',
-      email: email, // Pass email back to the template for rendering
-      token: token  // Pass token back to the template for rendering
-    });
+  // Check if newPassword and confirmPassword are the same
+  if (newPassword !== confirmPassword) {
+      return res.render('reset_password', {
+          title: 'Reset Password',
+          errors: 'The passwords did not match!',
+          email: email, // Pass email back to the template for rendering
+          token: token  // Pass token back to the template for rendering
+      });
   }
-    //still getting an error here
-   // if (!NewPassword || !token) {
-     //   return res.status(400).json({ error: 'newPassword, and token needed.' });
-    //}
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(NewPassword, 10);
+  // Check if email, newPassword, and token are provided
+  if ( !newPassword || !token) {
+      return res.status(400).json({ error: 'newPassword, and token needed.' });
+  }
+  // Hash the new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Verify  reset token in the database
-    database.query(t, [email, token], (error, results) => {
-        if (error) {
-            console.error('Error verifying reset token:', error);
-            return res.status(500).json({ error: 'cannot verify reset token.' });
-        }
+  // Verify the reset token in the database
+  database.query(t, [email, token], (error, results) => {
+      if (error) {
+          console.error('Error verifying reset token:', error);
+          return res.status(500).json({ error: 'error cannot verify reset token.' });
+      }
 
-        // Check if token is valid if not return message
-        if (results.length === 0) {
-            return res.status(400).json({ error: 'expired/invalid reset token.' });
-        }
+      // Check if token is valid
+      if (results.length === 0) {
+          return res.status(400).json({ error: 'expired or invalid reset token.' });
+      }
 
-        // Update the user password in database
-        database.query(r, [hashedPassword, email], (updateError, updateResults) => {
-            if (updateError) {
-                console.error('Error updating password:', updateError);
-                return res.status(500).json({ error: 'error occurred while updating the password.' });
-            }
+      // Update the user's password in database
+      database.query(r, [hashedPassword, email], (updateError, updateResults) => {
+          if (updateError) {
+              console.error('Error updating password:', updateError);
+              return res.status(500).json({ error: 'error occurred while updating the password.' });
+          }
 
-            // Delete old token from database
-            database.query(w, [email], (deleteError, deleteResults) => {
-                if (deleteError) {
-                    console.error('Error deleting reset token:', deleteError);
-                    
-                }
-                res.status(200).json({ message: 'The Password you provided has been reset successfully.' });
-            });
-        });
-    });
+          // Delete token from database
+          database.query(w, [email], (deleteError, deleteResults) => {
+              if (deleteError) {
+                  console.error('Error deleting reset token:', deleteError);
+                  
+              }
+              res.status(200).json({ message: 'The Password you provided has been reset successfully.' });
+          });
+      });
+  });
 });
-
